@@ -1,0 +1,24 @@
+Given images named index.JPG and matching eye-fi logfiles name index.log,
+(as fe-fi might generate, ahem):
+
+generate a list of files:
+  find . -type f > ../filelist
+
+sorted by index:
+  perl -nle '/(\d+)\.log$/ and $c{$1} = $_; END { foreach my $i (sort { $a <=> $b } keys %c) { print $c{$i} } }' ../filelist > ../filelist-sorted
+
+since these are overlapping windows into a single unified log file, regenerate
+the single log by printing only the new lines that appear in each successive
+index:
+  perl -nle 'system "diff --old-line-format= --unchanged-line-format= \"$old\" \"$_\"" if $old; $old = $_;' ../filelist-sorted > ../log-adds
+
+geolocate the wifi AP sets:
+  ./locate.py ~/backups/log-adds 2>~/locate-errorlog4 | tee ~/locate-output
+4
+
+convert the resolved locations into a GPS track file, sort-of-nmea-formatted:
+  ./nmea.py ~/locate-output4 | uniq > ~/track3
+
+use exiftool to apply these timestamps to the files:
+  ./exiftool -v 5 -directory=/Users/dichro/upload2 -geotag ~/track3 '-geotime<${DateTimeOriginal}+00:00' ~/upload/ 2>/tmp/exiftool-err >/tmp/exiftool-out+0
+
