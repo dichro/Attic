@@ -16,7 +16,7 @@ timeBuffer = 300
 
 # hitting the API too hard is a bad idea. Have a reasonable delay
 
-delay = 1
+delay = 5
 
 lastPhotoTime = 10000
 
@@ -32,7 +32,14 @@ lookups = []
 
 for line in fileinput.input():
   fields = line.rstrip().split(',')
-  localTime, absoluteTime = map(int, fields[0:2])
+  if len(fields) < 3:
+    sys.stderr.writelines('bad line %s\n' % line)
+    continue
+  try:
+    localTime, absoluteTime = map(int, fields[0:2])
+  except ValueError:
+    sys.stderr.writelines('bad timestamps %s\n' % line)
+    continue
   command = fields[2]
   # the card only learns absoluteTime when the camera writes a file to it
   # (from the file timestamp). Between poweron and the first file written,
@@ -109,17 +116,25 @@ for photos, aps in lookups:
   maps.request('POST', '/loc/json', jsonRequest)
   response = maps.getresponse()
   print 'HTTP', response.status, response.reason
-  if response.status == 200:
-    jsonReply = response.read()
-    print 'REP', jsonReply
-    reply = json.loads(jsonReply)
-    if reply: 
-      if 'location' in reply:
-        for photo in photos:
-          photo.extend([reply['location']['latitude'], reply['location']['longitude'], reply['location']['accuracy']])
-	  print 'PHOTO', ','.join(map(str, photo))
-      if 'access_token' in reply:
-        accessToken = reply['access_token']
+  while response.status != 200:
+    print 'sleeping'
+    time.sleep(60)
+    del request['access_token']
+    jsonRequest = json.dumps(request)
+    print 'REQ', jsonRequest
+    maps.request('POST', '/loc/json', jsonRequest)
+    response = maps.getresponse()
+    print 'HTTP', response.status, response.reason
+  jsonReply = response.read()
+  print 'REP', jsonReply
+  reply = json.loads(jsonReply)
+  if reply: 
+    if 'location' in reply:
+      for photo in photos:
+        photo.extend([reply['location']['latitude'], reply['location']['longitude'], reply['location']['accuracy']])
+        print 'PHOTO', ','.join(map(str, photo))
+    if 'access_token' in reply:
+      accessToken = reply['access_token']
 
-  time.sleep(delay)
+time.sleep(delay)
   
