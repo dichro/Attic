@@ -15,6 +15,12 @@ my %skipped;
 
 while(<>) {
   chomp;
+  my $size = (stat $_)[7];
+  unless($size > 10000) {
+    # too short to be believable
+    $skipped{"too short"}++;
+    next;
+  }
   my $thumb = $et->ImageInfo($_, ['Model', 'thumbnailimage']);
   #my $thumb = $et->ImageInfo($_);
   if(exists $thumb->{'Error'}) {
@@ -30,10 +36,15 @@ while(<>) {
     $skipped{"no thumb"}++;
     next;
   }
+  # digesting thumbnail to make a unique id. This works way
+  # better than I expected. I'm also assuming that the thumbnail
+  # is a header (rather than a footer) so it's likely to be
+  # present for truncated images too.
   my $digest = md5_hex(${$thumb->{'ThumbnailImage'}});
   $thumb->{"path"} = $_;
   s|.*/||;
-  $thumb->{"file"} = $_;
+  @{$thumb}{"file", "size"} = ($_, $size);
+  delete @{$thumb}{'Model', 'ThumbnailImage'};
   $digests{$digest} ||= [];
   push @{$digests{$digest}}, $thumb;
 }
@@ -50,17 +61,18 @@ foreach my $digest (keys %digests) {
   my %filenames;
   @filenames{map { $_->{"file"} } @files} = ();
   my @filenames = keys %filenames;
-  if(scalar(@filenames) == 1) {
-    # sometimes the same hash+filename lives in multiple directories
-    $results{"multiple copies"}++;
-    next;
-  }
-  if(scalar(grep { $_ =~ /^DSC/ } @filenames) == 1) {
-    # sometimes it's one file from the card and the rest from fe-fi
-    $results{"single eye-fi plus fe-fi"}++;
-    next;
-  }
-  $results{"unhandled"}++;
+  my $result = choose(@filenames);
+  print "$result ", Dumper(\@files) unless $results{$result}++;
+}
+
+sub choose {
+  my @filenames = @_;
+  # sometimes the same hash+filename lives in multiple directories
+  return "multiple copies" if scalar(@filenames) == 1;
+  # sometimes it's one file from the card and the rest from fe-fi
+  return "single eye-fi plus fe-fi" if scalar(grep { $_ =~ /^DSC/ } @filenames) == 1;
+  # or... we have no idea
+  return "unhandled";
 }
 
 foreach my $model (keys %results) {
