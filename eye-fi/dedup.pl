@@ -46,6 +46,12 @@ foreach my $digest (keys %digests) {
     $results{"single"}++;
     next;
   }
+  my %filenames;
+  @filenames{map { $_->{"file"} } @files} = ();
+  if(scalar(keys %filenames)) {
+    $results{"multiple copies"}++;
+    next;
+  }
   $results{"unhandled"}++;
 }
 
