@@ -62,15 +62,18 @@ foreach my $digest (keys %digests) {
   @filenames{map { $_->{"file"} } @files} = ();
   my @filenames = keys %filenames;
   my $result = choose(@filenames);
-  print "$result ", Dumper(\@files) unless $results{$result}++;
+  print "$result ", Dumper(\@files) unless $results{$result}++ > 2;
 }
 
 sub choose {
   my @filenames = @_;
   # sometimes the same hash+filename lives in multiple directories
   return "multiple copies" if scalar(@filenames) == 1;
+  my $dscs = scalar(grep { $_ =~ /^DSC/ } @filenames);
   # sometimes it's one file from the card and the rest from fe-fi
-  return "single eye-fi plus fe-fi" if scalar(grep { $_ =~ /^DSC/ } @filenames) == 1;
+  return "single eye-fi plus fe-fi" if $dscs == 1;
+  # sometimes there's no matching file from the card
+  return "no eye-fi" if $dscs == 0;
   # or... we have no idea
   return "unhandled";
 }
