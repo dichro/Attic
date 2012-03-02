@@ -43,13 +43,21 @@ my %results;
 foreach my $digest (keys %digests) {
   my @files = @{$digests{$digest}};
   if(scalar(@files) == 1) {
+    # sometimes there's just one copy
     $results{"single"}++;
     next;
   }
   my %filenames;
   @filenames{map { $_->{"file"} } @files} = ();
-  if(scalar(keys %filenames)) {
+  my @filenames = keys %filenames;
+  if(scalar(@filenames) == 1) {
+    # sometimes the same hash+filename lives in multiple directories
     $results{"multiple copies"}++;
+    next;
+  }
+  if(scalar(grep { $_ =~ /^DSC/ } @filenames) == 1) {
+    # sometimes it's one file from the card and the rest from fe-fi
+    $results{"single eye-fi plus fe-fi"}++;
     next;
   }
   $results{"unhandled"}++;

@@ -24,5 +24,7 @@ use exiftool to apply these timestamps to the files:
 
 # deduping images
 find ./eye-fi-backups/20120210 ./peru-backups/20111009  -iname '*.jpg' | PERL5LIB=/Users/miki/c/Image-ExifTool-8.50/lib c/attic/eye-fi/dedup.pl
+# two paths with overlap in images copied off eye-fi card
 find ./eye-fi-backups/20120210 ./peru-backups/20111009  -iname '*.jpg' | awk -F/ '{ print $NF, $0 }' | sort | head -2000 | tail -200 | cut -d' ' -f2 | PERL5LIB=/Users/miki/c/Image-ExifTool-8.50/lib c/attic/eye-fi/dedup.pl
-
+# multiple paths with same image via eye-fi and fe-fi
+find "./peru-backups/20111015-android/Eye-Fi 2011-10-07" "./peru-backups/20111009" -iname '*[579][027][0245].jpg' | PERL5LIB=/Users/miki/c/Image-ExifTool-8.50/lib c/attic/eye-fi/dedup.pl
